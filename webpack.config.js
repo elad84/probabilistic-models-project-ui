@@ -23,7 +23,15 @@ var config ={
                 include: this.context,
                 test : /\.js$/,
                 loader: 'babel-loader'
+            },
+            {
+                test: /\.js$/,
+                loader: 'imports?define=>false'
             }
+            // {
+            //     test: /\.css$/,
+            //     loader: "style!css"
+            // }
         ]
     },
     plugins : debug ? [] : [
