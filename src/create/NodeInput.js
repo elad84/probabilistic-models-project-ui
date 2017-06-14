@@ -177,6 +177,34 @@ export default class NodeInput extends Component {
 		AjaxUtil.postData('http://localhost:8080/bayesian/network/create', bayesian);
 	}
 
+    fileChosen(e){
+		console.log(e.target.files[0].name);
+		const _this = this;
+		AjaxUtil.getData("GET", "http://localhost:8080/bayesian/network/load?name=" + e.target.files[0].name, void 0, (data)=>{
+			_this.setState({
+				value: data.networkName
+			});
+
+			const nodes = [], edges =[];
+			for(let i = 0; i < data.nodes.length; i++){
+				nodes.push({id : data.nodes[i].nodeId, label : data.nodes[i]['displayName'], color: '#41e0c9'});
+			}
+
+			for(let i = 0; i < data.edges.length; i++){
+				edges.push({from : data.edges[i]['nodeId1'], to :data.edges[i]['nodeId2']});
+			}
+
+			_this.setState({
+                graph: {
+                    nodes: nodes,
+                    edges: edges
+                }
+			});
+		});
+
+
+	}
+
 
 	render() {
 		const children = [],
@@ -193,14 +221,15 @@ export default class NodeInput extends Component {
 			<div>
 				<div className="network-control">
 					<RaisedButton label="Save Network" style={style} onTouchTap={this.saveNetwork} />
-					<FlatButton label="Load Network" labelPosition="before">
-						<input type="file"/>
+					<FlatButton label="Load Network" containerElement='label' labelPosition="before">
+						<input type="file" onChange={this.fileChosen.bind(this)}/>
 					</FlatButton>
 				</div>
 
 				<TextField
 					hintText="Network Name"
 					floatingLabelText="Network Name"
+					value = {this.state.value}
 					ref = "networkNameField"
 				/>
 				<TextField
