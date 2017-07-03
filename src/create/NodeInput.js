@@ -6,6 +6,9 @@ import Graph from 'react-graph-vis'
 import SelectField from 'material-ui/SelectField';
 import MenuItem from 'material-ui/MenuItem';
 import AjaxUtil from "../utils/AjaxUtil"
+import MyTable from './DepedencyTAble'
+// import Popup from 'react-popup';
+import Dialog from 'material-ui/Dialog';
 
 let options = {
 	width : '100%',
@@ -54,13 +57,33 @@ export default class NodeInput extends Component {
 			edges : []
 		},
 		chosenNode : null,
-		chosenNodes : []
+		chosenNodes : [],
+		open : false
 	};
 
 	handleNodeChosen = (params) => {
+		this.setState({
+            chosenNodes : []
+		});
         this.setState({
 			chosenNode : params.nodes[0]
 		});
+        // this.refs.dialogWithCallBacks.show();
+        this.handleOpen();
+        // Popup.create({
+        //     title: null,
+        //     content: '<TextField hintText="0-1" floatingLabelText="Domain" ref= "domainData" />',
+        //     buttons: {
+        //         right: [{
+        //             text : 'Save',
+        //             action : () => {
+        //                 console.log(this.ref.domainData.value);
+        //                 // this.state.nodesMap[this.state.chosenNode]['domain'] = ;
+        //             }
+        //         }],
+        //         left: ['cancel']
+        //     }
+        // }, true);
 	}
 
 	handleChangeParents = (event, index, values) => {
@@ -159,7 +182,8 @@ export default class NodeInput extends Component {
 		const networkNodes = [], networkEdges = [], nodeMap = {};
 
 		for(let i = 0; i < nodes.length; i++){
-			networkNodes.push({"nodeId" : nodes[i].id, "displayName" : nodes[i].label, "parentList" : nodes[i]["parents"]});
+			networkNodes.push({"nodeId" : nodes[i].id, "displayName" : nodes[i].label, "parentList" : nodes[i]["parents"],
+				"domain" : this.state.nodesMap[nodes[i].id].domain});
 		}
 
 		for(let i = 0; i < edges.length; i++){
@@ -201,12 +225,52 @@ export default class NodeInput extends Component {
                 }
 			});
 		});
-
-
 	}
+
+    handleOpen = () => {
+        this.setState({open: true});
+    };
+
+    handleClose = () => {
+        this.setState({open: false});
+    };
+
+    setNodeDomain = () => {
+        let range = this.refs.nodeDomain.input.value.split('-'), domain = [];
+        if(range.length < 1){
+        	//nothing to do
+			return;
+		}
+
+		let lower = parseInt(range[0], 10);
+        domain.push(lower);
+
+        if(range.length > 1){
+			for(let i = lower+ 1; i < parseInt(range[1], 10); i++){
+				domain.push(i);
+			}
+		}
+        this.state.nodesMap[this.state.chosenNode]['domain'] = domain;
+        this.handleClose();
+	};
 
 
 	render() {
+        const actions = [
+			<FlatButton
+				label="Cancel"
+				primary={true}
+				onTouchTap={this.handleClose}
+			/>,
+			<FlatButton
+				label="Add"
+				primary={true}
+				keyboardFocused={true}
+				onTouchTap={this.setNodeDomain}
+			/>,
+        ];
+
+
 		const children = [],
 			parentsList = [];
 
@@ -229,7 +293,7 @@ export default class NodeInput extends Component {
 				<TextField
 					hintText="Network Name"
 					floatingLabelText="Network Name"
-					value = {this.state.value}
+					// value = {this.state.value}
 					ref = "networkNameField"
 				/>
 				<TextField
@@ -259,6 +323,27 @@ export default class NodeInput extends Component {
 				{/*<RaisedButton label="Add Edge" style={style} onTouchTap={this.addEdge} />*/}
 				<h1>Your Network</h1>
 				<Graph graph={this.state.graph} options={options} events={{click: this.handleNodeChosen}} />
+				<MyTable />
+                {/*<Popup*/}
+                    {/*closeBtn={true}*/}
+                    {/*defaultOk="Save"*/}
+                    {/*defaultCancel="Cancel"*/}
+                    {/*wildClasses={false}*/}
+                    {/*closeOnOutsideClick={true}*/}
+                {/*/>*/}
+				<Dialog
+					title="Node details"
+					actions={actions}
+					modal={false}
+					open={this.state.open}
+					onRequestClose={this.handleClose}
+				>
+					<TextField
+						hintText="0-1"
+						floatingLabelText="Domain"
+						ref = "nodeDomain"
+					/>
+				</Dialog>
 			</div>
 		);
 	}
