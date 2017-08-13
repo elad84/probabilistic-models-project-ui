@@ -1,5 +1,4 @@
 import React, {Component} from 'react';
-import NetworkTypeSelect from '../create/NetworkTypeSelect'
 import NodeInput from '../create/NodeInput'
 let graph = {
 	nodes: [
@@ -27,7 +26,6 @@ export default class CreateNetworkPage extends Component {
 	render() {
 		return (
 			<div>
-				<NetworkTypeSelect/>
 				<NodeInput/>
 			</div>
 		);

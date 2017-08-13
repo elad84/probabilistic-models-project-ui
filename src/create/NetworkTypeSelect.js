@@ -18,7 +18,9 @@ export default class NetworkTypeSelect extends Component {
 		value: 1,
 	};
 
-	handleChange = (event, index, value) => this.setState({value});
+	handleChange = (event, index, value) => {
+		this.setState({value});
+    };
 
 	render() {
 		return (
