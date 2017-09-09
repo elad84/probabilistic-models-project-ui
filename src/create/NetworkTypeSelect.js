@@ -31,7 +31,7 @@ export default class NetworkTypeSelect extends Component {
 					onChange={this.handleChange}
 				>
 					<MenuItem value={1} primaryText="Regular" />
-					<MenuItem value={2} primaryText="Iterative" />
+					<MenuItem value={2} primaryText="Layered" />
 				</SelectField>
 			</div>
 		);

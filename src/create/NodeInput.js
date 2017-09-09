@@ -117,8 +117,8 @@ export default class NodeInput extends Component {
 
 	addNode = (e) => {
 		const { graph } = this.state;
-		const nodes = Array.from(graph.nodes);
 
+		let graphNodes = Array.from(graph.nodes), nodes = Array.from(this.state.nodes);
 		if(nodes.length == 0){
 			alert("Cannot add node to an empty network");
 			return;
@@ -134,12 +134,18 @@ export default class NodeInput extends Component {
 		id++;
 
         let node = {id: id, label: 'Node'+ id, color: '#41e0c9'};
+        graphNodes = graphNodes.concat(node);
+        nodes = nodes.concat(node)
+
+        if(this.state.networkType == 2){
+            graphNodes.push({id: id+nodes.length, label: 'Node'+ id + "(i-1)", color: '#175ed1'});
+		}
 
 
 		this.setState({
 			graph: {
 				graph,
-				nodes: nodes.concat(node),
+				nodes: graphNodes,
 				edges: graph.edges
 			}
 		});
@@ -147,22 +153,23 @@ export default class NodeInput extends Component {
 		this.state.nodesMap[id] = node;
 
 		this.setState({
-            "nodes": node
+            "nodes": nodes
 		})
 	};
 
     addControlNode = () => {
         const { graph } = this.state;
-        const nodes = Array.from(graph.nodes);
+        const graphNodes = Array.from(graph.nodes);
+        const nodes = Array.from(this.state.nodes);
 
         if(nodes.length == 0){
             alert("Cannot add control node to an empty network");
             return;
         }
 
-        let id = 'c1';
+        let id = 'c0';
         for(let i =0; i < nodes.length; i++){
-            if(nodes[i].control == true && id < nodes[i].id){
+            if(nodes[i].control == true && id < parseInt(nodes[i].id.substring(1), 10)){
                 id = nodes[i].id;
             }
         }
@@ -170,28 +177,28 @@ export default class NodeInput extends Component {
         let intId = parseInt(id.substring(1), 10);
 		intId++;
 
-        let node = {id: 'c' + intId, label: 'Control Node'+ intId, color: '#41e0c3'};
+		let newNodeId = 'c' + intId;
+
+        let node = {id: newNodeId, label: 'Control Node'+ intId, color: '#6aa34e', control: true};
 
 
         this.setState({
             graph: {
                 graph,
-                nodes: nodes.concat(node),
+                nodes: graphNodes.concat(node),
                 edges: graph.edges
             }
         });
 
-        this.state.nodesMap[id] = node;
+        this.state.nodesMap[newNodeId] = node;
 
         this.setState({
             nodes: nodes.concat(node)
-        })
+        });
     }
 
 	createBaseNetwork = (e) => {
 		const { graph } = this.state;
-
-		console.log(this.networkTypeSelect.state.value);
 
 		this.setState({
 			networkType : this.networkTypeSelect.state.value
@@ -210,7 +217,7 @@ export default class NodeInput extends Component {
 
 		if(this.networkTypeSelect.state.value === 2){
             for(let i =1; i < count; i++) {
-                networkNodes.push({id: i+count, label: 'Node'+ i + "(i-1)", color: '#175ed1'});
+                networkNodes.push({id: i+count, label: 'Node'+ i + "(i-1)", color: '#175ed1', original : false});
             }
 
             this.setState({
@@ -234,11 +241,9 @@ export default class NodeInput extends Component {
 			nodesMapping[node.id] = node;
 		});
 
-		this.setState((prev,props) => {
-			return {
-				"nodes": nodes
-			}
-		 });
+		this.setState({
+            "nodes": nodes
+    		});
 
 		this.setState({
             nodesMap : nodesMapping
@@ -286,7 +291,11 @@ export default class NodeInput extends Component {
 
 		for(let i = 0; i < nodes.length; i++){
 			networkNodes.push({"nodeId" : nodes[i].id, "displayName" : nodes[i].label, "parentList" : nodes[i]["parents"],
-				"domain" : {"value" : this.state.nodesMap[nodes[i].id].domain.value, "name" : this.state.nodesMap[nodes[i].id].domain.name}});
+				"domain" : this.state.nodesMap[nodes[i].id] && this.state.nodesMap[nodes[i].id].domain ? this.state.nodesMap[nodes[i].id].domain : null});
+
+			if(nodes[i].control === true){
+				networkNodes[i].controlNode =true;
+			}
 		}
 
 		for(let i = 0; i < edges.length; i++){
@@ -296,26 +305,31 @@ export default class NodeInput extends Component {
 		let bayesian = {
 		    "filePath" : e.target.files[0].name,
             "network" : {
-                "networkName" : name,
+                "name" : name,
                 "nodes" : networkNodes,
                 "edges" :networkEdges
             }
 		}
 
-		AjaxUtil.postData('http://localhost:8080/bayesian/network/create', bayesian);
+		AjaxUtil.postData('http://localhost:8090/bayesian/network/create', bayesian);
 	}
 
     fileChosen(e){
 		console.log(e.target.files[0].name);
 		const _this = this;
-		AjaxUtil.getData("GET", "http://localhost:8080/bayesian/network/load?name=" + e.target.files[0].name, void 0, (data)=>{
+		AjaxUtil.getData("GET", "http://localhost:8090/bayesian/network/load?name=" + e.target.files[0].name, void 0, (data)=>{
 			_this.setState({
-				value: data.networkName
+				value: data.name
 			});
 
 			const nodes = [], edges =[];
 			for(let i = 0; i < data.nodes.length; i++){
-				nodes.push({id : data.nodes[i].nodeId, label : data.nodes[i]['displayName'], color: '#41e0c9'});
+				let nodeColor = '#41e0c9', node = data.nodes[i];
+				if(data.nodes[i].controlNode === true){
+					nodeColor = '#6aa34e';
+				}
+				nodes.push({id : node.nodeId, label : node['displayName'], color: nodeColor, domain :node.domain});
+                this.state.nodesMap[nodes[i]] = nodes[i];
 			}
 
 			for(let i = 0; i < data.edges.length; i++){
@@ -327,6 +341,10 @@ export default class NodeInput extends Component {
                     nodes: nodes,
                     edges: edges
                 }
+			});
+
+			_this.setState({
+				nodes : nodes
 			});
 		});
 	}
@@ -352,9 +370,46 @@ export default class NodeInput extends Component {
 		});
 	};
 
-    setNodeDomain = () => {
-        let range = this.refs.nodeDomain.input.value.split(","), domain = [];
+    setNodeDetails = () => {
+        let range = this.refs.nodeDomain.input.value.split(","), domain = [],
+		nodeLabel = this.refs.nodeLabel.input.value;
         let rangeStr = this.refs.nodeDomain.input.value;
+
+        //set node label
+		if(nodeLabel && nodeLabel !== ''){
+            const { graph } = this.state;
+            const nodes = Array.from(graph.nodes);
+
+            let node = null, index;
+            for(let i =0; i < nodes.length; i++){
+                if(this.state.chosenNode === nodes[i].id){
+                    node = nodes[i];
+                    index = i;
+                }
+            }
+
+            if(node !== null){
+            	let copy = Object.assign({}, node);
+            	copy.label = nodeLabel;
+            	nodes.splice(index, 1);
+            	nodes.push(copy);
+			}
+
+            this.setState({
+                graph: {
+                    graph,
+                    nodes: nodes,
+                    edges: graph.edges
+                }
+            });
+
+            this.setState({
+                "nodes": nodes
+            });
+            this.state.nodesMap[this.state.chosenNode]['label'] = nodeLabel;
+		}
+
+        //set node range
         if(rangeStr.indexOf(',') > 0){
         	//have range as label
         	range = rangeStr.split(",");
@@ -400,10 +455,10 @@ export default class NodeInput extends Component {
 				onTouchTap={this.handleClose}
 			/>,
 			<FlatButton
-				label="Set Node Domain"
+				label="Set Node Details"
 				primary={true}
 				keyboardFocused={true}
-				onTouchTap={this.setNodeDomain}
+				onTouchTap={this.setNodeDetails}
 			/>
         ];
 
@@ -499,6 +554,14 @@ export default class NodeInput extends Component {
 							value= {this.state.nodeValues}
 							floatingLabelText="Domain"
 							ref = "nodeDomain"
+						/>
+					</div>
+					<div>
+						<TextField
+							hintText="Node 1"
+							// value= {this.state.chosenNode && this.state.chosenNode.label || ""}
+							floatingLabelText="Label"
+							ref = "nodeLabel"
 						/>
 					</div>
 					<div>
